@@ -3,6 +3,11 @@ variable "project" {
   type        = string
 }
 
+variable "number_of_vpcs" {
+  description = "Number of vpcs to create"
+  type        = string
+}
+
 
 variable "region" {
   description = "The region where resources get deployed"
@@ -18,6 +23,7 @@ variable "db_region" {
   description = "The region where db subnet get deployed"
   type        = string
 }
+
 
 variable "vpc_routing_mode" {
   description = "Variable to define where the routes will be"
@@ -68,3 +74,4 @@ variable "route_internet_next_hop_gateway" {
   description = "The next hop gateway for the route to the internet"
   type        = string
 }
+

@@ -15,7 +15,7 @@ variable "region" {
 }
 
 variable "vpc_routing_mode" {
-  description = "The region where resources get deployed"
+  description = "Variable to define where the routes will be"
   type        = string
 }
 

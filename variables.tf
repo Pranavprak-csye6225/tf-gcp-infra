@@ -3,14 +3,19 @@ variable "project" {
   type        = string
 }
 
-variable "number_of_vpcs" {
-  description = "Number of vpcs to create"
-  type        = string
-}
-
 
 variable "region" {
   description = "The region where resources get deployed"
+  type        = string
+}
+
+variable "webapp_region" {
+  description = "The region where webapp subnet get deployed"
+  type        = string
+}
+
+variable "db_region" {
+  description = "The region where db subnet get deployed"
   type        = string
 }
 

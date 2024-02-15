@@ -56,5 +56,19 @@ Before you can start using Google Cloud Platform (GCP) services, you need to ena
 
 Document the list of enabled Google APIs for your project here.
 
-1. Google Cloud Compute Engine API
-
+1. Google Cloud Compute Engine API	
+2. BigQuery API					
+3. BigQuery Migration API					
+4. BigQuery Storage API					
+5. Cloud Datastore API					
+6. Cloud Logging API					
+7. Cloud Monitoring API					
+8. Cloud OS Login API					
+9. Cloud SQL					
+10. Cloud Storage					
+11. Cloud Storage API					
+12. Cloud Trace API					
+13. Google Cloud APIs					
+14. Google Cloud Storage JSON API					
+15. Service Management API					
+16. Service Usage API

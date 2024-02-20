@@ -7,10 +7,9 @@ provider "google" {
 resource "google_compute_network" "vpc_network" {
   count                           = var.number_of_vpcs
   name                            = "${var.vpc_network_name}-${count.index + 1}"
-  auto_create_subnetworks         = false
+  auto_create_subnetworks        = false
   routing_mode                    = var.vpc_routing_mode
   delete_default_routes_on_create = true
-}
 
 resource "google_compute_subnetwork" "webapp" {
   count         = var.number_of_vpcs

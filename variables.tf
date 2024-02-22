@@ -103,13 +103,13 @@ variable "firewall_description" {
   type        = string
 }
 
-variable "firewall_name" {
-  description = "The name of the firewall created"
+variable "firewall_name_allow" {
+  description = "The name of the firewall created for allowing ports"
   type        = string
 }
 
-variable "firewall_protocol" {
-  description = "The protocol to provide in firewall"
+variable "firewall_name_deny" {
+  description = "The name of the firewall created for denying ports"
   type        = string
 }
 

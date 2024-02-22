@@ -61,18 +61,36 @@ resource "google_compute_instance" "vm_instance" {
   }
 }
 
-resource "google_compute_firewall" "vm_instance_firewall" {
-  name        = var.firewall_name
+resource "google_compute_firewall" "vm_instance_firewall_deny" {
+  name        = var.firewall_name_deny
   network     = google_compute_network.vpc_network.self_link
   description = var.firewall_description
 
-  allow {
-    protocol = var.firewall_protocol
-    ports    = var.firewall_ports
+  deny {
+    protocol = "all"
+    ports    = []
   }
+
   source_tags   = var.vm_tag
   target_tags   = var.vm_tag
   source_ranges = var.source_ranges
 }
+
+resource "google_compute_firewall" "vm_instance_firewall_allow" {
+  name        = var.firewall_name_allow
+  network     = google_compute_network.vpc_network.self_link
+  description = var.firewall_description
+
+  allow {
+    protocol = "tcp"
+    ports    = var.firewall_ports
+  }
+  priority = 800
+
+  source_tags   = var.vm_tag
+  target_tags   = var.vm_tag
+  source_ranges = var.source_ranges
+}
+
 
 

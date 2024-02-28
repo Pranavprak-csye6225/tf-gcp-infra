@@ -108,6 +108,52 @@ resource "google_service_networking_connection" "ps_connection" {
   reserved_peering_ranges = [google_compute_global_address.ps_ip_address.name]
 }
 
+resource "random_id" "db_name_suffix" {
+  byte_length = 4
+}
+resource "google_sql_database_instance" "mysql_instance" {
+  name                = "main-instance-${random_id.db_name_suffix.hex}"
+  database_version    = "MYSQL_8_0"
+  deletion_protection = false
+  depends_on          = [google_service_networking_connection.ps_connection]
+  settings {
+    tier              = "db-f1-micro"
+    availability_type = "REGIONAL"
+    disk_type         = "PD_SSD"
+    disk_size         = 100
+    backup_configuration {
+      enabled            = true
+      binary_log_enabled = true
+    }
+    ip_configuration {
+      ipv4_enabled                                  = false
+      private_network                               = google_compute_network.vpc_network.self_link
+      enable_private_path_for_google_cloud_services = true
+    }
+  }
+}
+resource "google_sql_database" "database" {
+  name     = "webapp"
+  instance = google_sql_database_instance.mysql_instance.name
+}
+
+resource "random_password" "password" {
+  length           = 12
+  special          = true
+  min_lower        = 2
+  min_upper        = 2
+  min_numeric      = 2
+  min_special      = 2
+  override_special = "‘~!@#$%^&*()_-+={}[]/<>,.;?':|"
+}
+
+
+resource "google_sql_user" "users" {
+  name     = "webapp"
+  instance = google_sql_database_instance.mysql_instance.name
+  password = random_password.password.result
+}
+
 
 
 

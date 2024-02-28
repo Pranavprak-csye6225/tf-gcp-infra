@@ -18,10 +18,10 @@ resource "google_compute_subnetwork" "webapp" {
 }
 
 resource "google_compute_subnetwork" "db" {
-  name          = var.db_subnet_name
-  ip_cidr_range = var.db_ipcidr
-  network       = google_compute_network.vpc_network.id
-
+  name                     = var.db_subnet_name
+  ip_cidr_range            = var.db_ipcidr
+  network                  = google_compute_network.vpc_network.id
+  private_ip_google_access = true
 }
 
 resource "google_compute_route" "route_internet" {
@@ -55,6 +55,7 @@ resource "google_compute_instance" "vm_instance" {
     }
 
   }
+
   service_account {
     email  = var.service_account_email
     scopes = var.service_account_scopes
@@ -91,6 +92,27 @@ resource "google_compute_firewall" "vm_instance_firewall_allow" {
   target_tags   = var.vm_tag
   source_ranges = var.source_ranges
 }
+
+
+resource "google_compute_global_address" "ps_ip_address" {
+  name          = "ps-ip-address"
+  address_type  = "INTERNAL"
+  purpose       = "VPC_PEERING"
+  network       = google_compute_network.vpc_network.self_link
+  prefix_length = 24
+}
+
+resource "google_service_networking_connection" "ps_connection" {
+  network                 = google_compute_network.vpc_network.self_link
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.ps_ip_address.name]
+}
+
+
+
+
+
+
 
 
 

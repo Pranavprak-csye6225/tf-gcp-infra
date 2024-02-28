@@ -55,6 +55,12 @@ resource "google_compute_instance" "vm_instance" {
     }
 
   }
+  metadata_startup_script = <<-EOF
+    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/csye?createDatabaseIfNotExist=true" > .env
+    echo "DATABASE_USERNAME=webapp" >> .env
+    echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
+    sudo mv .env /opt/
+  EOF
 
   service_account {
     email  = var.service_account_email

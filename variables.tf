@@ -78,7 +78,7 @@ variable "vm_tag" {
   type        = list(string)
 }
 
-variable "disk_size" {
+variable "disk_size_vm" {
   description = "The size of the boot disk in GB"
   type        = number
 }
@@ -122,5 +122,126 @@ variable "source_ranges" {
   description = "The source IP ranges for the firewall rule"
   type        = list(string)
 }
+
+
+variable "disk_size_mysql" {
+  description = "The size of the boot disk in GB for mysql"
+  type        = number
+}
+
+variable "mysql_instance_name" {
+  description = "The name of the mysql instance"
+  type        = string
+}
+variable "mysql_instance_availability_type" {
+  description = "The availability type of the mysql instance"
+  type        = string
+}
+
+variable "mysql_version" {
+  description = "The version of the mysql"
+  type        = string
+}
+
+variable "mysql_instance_tier" {
+  description = "The tier of the MySQL instance"
+  type        = string
+}
+
+variable "mysql_instance_disk_type" {
+  description = "The disk type of the MySQL instance"
+  type        = string
+}
+
+variable "mysql_instance_deletion_policy" {
+  description = "Deletion policy of the mysql instance"
+  type        = bool
+}
+
+variable "mysql_instance_backup_enabled" {
+  description = "Indicates whether backup is enabled for the MySQL instance"
+  type        = bool
+}
+
+variable "mysql_instance_binary_log_enabled" {
+  description = "Indicates whether binary logging is enabled for the MySQL instance"
+  type        = bool
+}
+
+variable "mysql_instance_ipv4_enabled" {
+  description = "Indicates whether IPv4 is enabled for the MySQL instance"
+  type        = bool
+}
+
+variable "mysql_instance_private_path_enabled" {
+  description = "Indicates whether private path is enabled for Google Cloud services for the MySQL instance"
+  type        = bool
+}
+
+variable "mysql_database_name" {
+  description = "The name of the mysql database"
+  type        = string
+}
+
+variable "password_length" {
+  description = "The length of the randomly generated password"
+  type        = number
+}
+
+variable "password_special" {
+  description = "Indicates whether special characters are included in the password"
+  type        = bool
+}
+
+variable "password_min_lower" {
+  description = "The minimum number of lowercase characters in the password"
+  type        = number
+}
+
+variable "password_min_upper" {
+  description = "The minimum number of uppercase characters in the password"
+  type        = number
+}
+
+variable "password_min_numeric" {
+  description = "The minimum number of numeric characters in the password"
+  type        = number
+}
+
+variable "password_min_special" {
+  description = "The minimum number of special characters in the password"
+  type        = number
+}
+
+variable "password_override_special" {
+  description = "A string of special characters that override the default set for password generation"
+  type        = string
+}
+
+variable "mysql_user_name" {
+  description = "The name of the mysql user"
+  type        = string
+}
+
+variable "global_ip_name" {
+  description = "The name of the global internal IP address"
+  type        = string
+}
+
+variable "global_ip_address_type" {
+  description = "The address type of the global ip address"
+  type        = string
+}
+
+variable "global_ip_address_purpose" {
+  description = "The purpose for global ip address"
+  type        = string
+}
+
+variable "ps_connection_service" {
+  description = "The service for which the service networking connection is established"
+  type        = string
+}
+
 
 

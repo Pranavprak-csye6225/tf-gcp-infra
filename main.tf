@@ -42,7 +42,7 @@ resource "google_compute_instance" "vm_instance" {
     auto_delete = true
     initialize_params {
       image = var.image
-      size  = var.disk_size
+      size  = var.disk_size_vm
       type  = var.disk_type
     }
 
@@ -59,6 +59,7 @@ resource "google_compute_instance" "vm_instance" {
     echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/csye?createDatabaseIfNotExist=true" > .env
     echo "DATABASE_USERNAME=webapp" >> .env
     echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
+    sudo chown -R csye6225:csye6225 .env
     sudo mv .env /opt/
   EOF
 
@@ -101,16 +102,16 @@ resource "google_compute_firewall" "vm_instance_firewall_allow" {
 
 
 resource "google_compute_global_address" "ps_ip_address" {
-  name          = "ps-ip-address"
-  address_type  = "INTERNAL"
-  purpose       = "VPC_PEERING"
+  name          = var.global_ip_name
+  address_type  = var.global_ip_address_type
+  purpose       = var.global_ip_address_purpose
   network       = google_compute_network.vpc_network.self_link
   prefix_length = 24
 }
 
 resource "google_service_networking_connection" "ps_connection" {
   network                 = google_compute_network.vpc_network.self_link
-  service                 = "servicenetworking.googleapis.com"
+  service                 = var.ps_connection_service
   reserved_peering_ranges = [google_compute_global_address.ps_ip_address.name]
 }
 
@@ -118,44 +119,44 @@ resource "random_id" "db_name_suffix" {
   byte_length = 4
 }
 resource "google_sql_database_instance" "mysql_instance" {
-  name                = "main-instance-${random_id.db_name_suffix.hex}"
-  database_version    = "MYSQL_8_0"
-  deletion_protection = false
+  name                = "${var.mysql_instance_name}-${random_id.db_name_suffix.hex}"
+  database_version    = var.mysql_version
+  deletion_protection = var.mysql_instance_deletion_policy
   depends_on          = [google_service_networking_connection.ps_connection]
   settings {
-    tier              = "db-f1-micro"
-    availability_type = "REGIONAL"
-    disk_type         = "PD_SSD"
-    disk_size         = 100
+    tier              = var.mysql_instance_tier
+    availability_type = var.mysql_instance_availability_type
+    disk_type         = var.mysql_instance_disk_type
+    disk_size         = var.disk_size_mysql
     backup_configuration {
-      enabled            = true
-      binary_log_enabled = true
+      enabled            = var.mysql_instance_backup_enabled
+      binary_log_enabled = var.mysql_instance_binary_log_enabled
     }
     ip_configuration {
-      ipv4_enabled                                  = false
+      ipv4_enabled                                  = var.mysql_instance_ipv4_enabled
       private_network                               = google_compute_network.vpc_network.self_link
-      enable_private_path_for_google_cloud_services = true
+      enable_private_path_for_google_cloud_services = var.mysql_instance_private_path_enabled
     }
   }
 }
-resource "google_sql_database" "database" {
-  name     = "webapp"
+resource "google_sql_database" "webapp" {
+  name     = var.mysql_database_name
   instance = google_sql_database_instance.mysql_instance.name
 }
 
 resource "random_password" "password" {
-  length           = 12
-  special          = true
-  min_lower        = 2
-  min_upper        = 2
-  min_numeric      = 2
-  min_special      = 2
-  override_special = "‘~!@#$%^&*()_-+={}[]/<>,.;?':|"
+  length           = var.password_length
+  special          = var.password_special
+  min_lower        = var.password_min_lower
+  min_upper        = var.password_min_numeric
+  min_numeric      = var.password_min_numeric
+  min_special      = var.password_min_special
+  override_special = var.password_override_special
 }
 
 
-resource "google_sql_user" "users" {
-  name     = "webapp"
+resource "google_sql_user" "webapp" {
+  name     = var.mysql_user_name
   instance = google_sql_database_instance.mysql_instance.name
   password = random_password.password.result
 }

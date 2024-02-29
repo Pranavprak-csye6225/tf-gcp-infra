@@ -159,7 +159,10 @@ resource "google_sql_user" "webapp" {
   name     = var.mysql_user_name
   instance = google_sql_database_instance.mysql_instance.name
   password = random_password.password.result
+  host     = google_compute_instance.vm_instance.hostname
 }
+
+
 
 
 

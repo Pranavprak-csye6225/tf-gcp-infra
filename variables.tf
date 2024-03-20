@@ -243,5 +243,40 @@ variable "ps_connection_service" {
   type        = string
 }
 
+variable "service_account_id" {
+  description = "The id of the service account"
+  type        = string
+}
 
+variable "service_account_display_name" {
+  description = "The display name of the display name"
+  type        = string
+}
 
+variable "iam_logging_roles" {
+  description = "iam logging role"
+  type        = string
+}
+
+variable "iam_monitoring_roles" {
+  description = "iam monitoring role"
+  type        = string
+}
+
+variable "dns_record_set_name" {
+  description = "Name of the record"
+  type        = string
+}
+
+variable "record_type" {
+  description = "Type of dns record"
+  type        = string
+}
+variable "dns_ttl" {
+  description = "TTL of the dns record"
+  type        = number
+}
+variable "dns_managed_zone" {
+  description = "The name of managed zone"
+  type        = string
+}

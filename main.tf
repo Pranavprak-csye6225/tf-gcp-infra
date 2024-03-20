@@ -128,13 +128,13 @@ resource "google_sql_user" "webapp" {
 
 
 resource "google_service_account" "webapp_instance_access" {
-  account_id   = "webapp-instance-access"
-  display_name = "Webapp instance access"
+  account_id   = var.service_account_id
+  display_name = var.service_account_display_name
 }
 
 resource "google_project_iam_binding" "bind_logging_admin" {
   project = var.project
-  role    = "roles/logging.admin"
+  role    = var.iam_logging_roles
 
   members = [
     "serviceAccount:${google_service_account.webapp_instance_access.email}"
@@ -143,7 +143,7 @@ resource "google_project_iam_binding" "bind_logging_admin" {
 
 resource "google_project_iam_binding" "bind_monitoring_metric_writer" {
   project = var.project
-  role    = "roles/monitoring.metricWriter"
+  role    = var.iam_monitoring_roles
 
   members = [
     "serviceAccount:${google_service_account.webapp_instance_access.email}"
@@ -177,7 +177,7 @@ resource "google_compute_instance" "vm_instance" {
 
   }
   metadata_startup_script = <<-EOF
-    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/csye?createDatabaseIfNotExist=true" > .env
+    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/webapp?createDatabaseIfNotExist=true" > .env
     echo "DATABASE_USERNAME=webapp" >> .env
     echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
     sudo chown -R csye6225:csye6225 .env
@@ -193,11 +193,11 @@ resource "google_compute_instance" "vm_instance" {
 
 
 resource "google_dns_record_set" "webapp" {
-  name = "pranavprakash.me."
-  type = "A"
-  ttl  = 60
+  name = var.dns_record_set_name
+  type = var.record_type
+  ttl  = var.dns_ttl
 
-  managed_zone = "pranavprakash"
+  managed_zone = var.dns_managed_zone
 
   rrdatas = [google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip]
 }

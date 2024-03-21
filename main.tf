@@ -31,43 +31,6 @@ resource "google_compute_route" "route_internet" {
   network          = google_compute_network.vpc_network.id
 }
 
-resource "google_compute_instance" "vm_instance" {
-  name         = var.vm_instance_name
-  machine_type = var.machine_type
-  zone         = var.zone
-
-  tags = var.vm_tag
-
-  boot_disk {
-    auto_delete = true
-    initialize_params {
-      image = var.image
-      size  = var.disk_size_vm
-      type  = var.disk_type
-    }
-
-  }
-  network_interface {
-    network    = google_compute_network.vpc_network.self_link
-    subnetwork = google_compute_subnetwork.webapp.self_link
-    access_config {
-      // Ephemeral public IP
-    }
-
-  }
-  metadata_startup_script = <<-EOF
-    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/csye?createDatabaseIfNotExist=true" > .env
-    echo "DATABASE_USERNAME=webapp" >> .env
-    echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
-    sudo chown -R csye6225:csye6225 .env
-    sudo mv .env /opt/
-  EOF
-
-  service_account {
-    email  = var.service_account_email
-    scopes = var.service_account_scopes
-  }
-}
 
 resource "google_compute_firewall" "vm_instance_firewall_deny" {
   name        = var.firewall_name_deny
@@ -139,6 +102,7 @@ resource "google_sql_database_instance" "mysql_instance" {
     }
   }
 }
+
 resource "google_sql_database" "webapp" {
   name     = var.mysql_database_name
   instance = google_sql_database_instance.mysql_instance.name
@@ -156,19 +120,84 @@ resource "random_password" "password" {
 
 
 resource "google_sql_user" "webapp" {
-  name     = var.mysql_user_name
-  instance = google_sql_database_instance.mysql_instance.name
-  password = random_password.password.result
-  host     = google_compute_instance.vm_instance.hostname
+  name       = var.mysql_user_name
+  depends_on = [random_password.password]
+  instance   = google_sql_database_instance.mysql_instance.name
+  password   = random_password.password.result
+}
+
+
+resource "google_service_account" "webapp_instance_access" {
+  account_id   = var.service_account_id
+  display_name = var.service_account_display_name
+}
+
+resource "google_project_iam_binding" "bind_logging_admin" {
+  project = var.project
+  role    = var.iam_logging_roles
+
+  members = [
+    "serviceAccount:${google_service_account.webapp_instance_access.email}"
+  ]
+}
+
+resource "google_project_iam_binding" "bind_monitoring_metric_writer" {
+  project = var.project
+  role    = var.iam_monitoring_roles
+
+  members = [
+    "serviceAccount:${google_service_account.webapp_instance_access.email}"
+  ]
+}
+
+
+resource "google_compute_instance" "vm_instance" {
+  name         = var.vm_instance_name
+  machine_type = var.machine_type
+  zone         = var.zone
+
+  tags       = var.vm_tag
+  depends_on = [google_service_account.webapp_instance_access, google_project_iam_binding.bind_logging_admin, google_project_iam_binding.bind_monitoring_metric_writer]
+
+  boot_disk {
+    auto_delete = true
+    initialize_params {
+      image = var.image
+      size  = var.disk_size_vm
+      type  = var.disk_type
+    }
+
+  }
+  network_interface {
+    network    = google_compute_network.vpc_network.self_link
+    subnetwork = google_compute_subnetwork.webapp.self_link
+    access_config {
+      // Ephemeral public IP
+    }
+
+  }
+  metadata_startup_script = <<-EOF
+    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/webapp?createDatabaseIfNotExist=true" > .env
+    echo "DATABASE_USERNAME=webapp" >> .env
+    echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
+    sudo chown -R csye6225:csye6225 .env
+    sudo mv .env /opt/
+  EOF
+
+  service_account {
+    email  = google_service_account.webapp_instance_access.email
+    scopes = var.service_account_scopes
+  }
 }
 
 
 
+resource "google_dns_record_set" "webapp" {
+  name = var.dns_record_set_name
+  type = var.record_type
+  ttl  = var.dns_ttl
 
+  managed_zone = var.dns_managed_zone
 
-
-
-
-
-
-
+  rrdatas = [google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip]
+}

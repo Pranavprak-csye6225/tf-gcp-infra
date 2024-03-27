@@ -170,6 +170,34 @@ resource "google_storage_bucket_object" "verify_email" {
   source = "/Users/pranavprakash/cloud course/assignments/project/verify-emails.zip"
 }
 
+resource "google_cloudfunctions2_function" "verify_email_function" {
+  name        = "verify-email-function"
+  description = "Function to send verification email"
+  location    = var.region
+
+  build_config {
+    runtime     = "java17"
+    entry_point = "verifyemail.VerifyEmailSend"
+
+    source {
+      storage_source {
+        bucket = google_storage_bucket.bucket.name
+        object = google_storage_bucket_object.verify_email.name
+      }
+    }
+
+  }
+  service_config {
+    service_account_email = google_service_account.webapp_instance_access.email
+  }
+
+  event_trigger {
+    trigger_region = var.region
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = google_pubsub_topic.verify_email.id
+    retry_policy   = "RETRY_POLICY_RETRY"
+  }
+}
 
 
 resource "google_compute_instance" "vm_instance" {
@@ -201,6 +229,8 @@ resource "google_compute_instance" "vm_instance" {
     echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/webapp?createDatabaseIfNotExist=true" > .env
     echo "DATABASE_USERNAME=webapp" >> .env
     echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
+    echo "PROJECT_ID=${var.project}" >> .env
+    echo "TOPIC_ID=verify-email" >> .env
     sudo chown -R csye6225:csye6225 .env
     sudo mv .env /opt/
   EOF

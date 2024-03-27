@@ -153,6 +153,24 @@ resource "google_pubsub_topic" "verify_email" {
   message_retention_duration = "604800s"
 }
 
+resource "random_id" "bucket_prefix" {
+  byte_length = 8
+}
+
+resource "google_storage_bucket" "bucket" {
+  name                        = "${random_id.bucket_prefix.hex}-gcf-source"
+  location                    = "US"
+  uniform_bucket_level_access = true
+}
+
+
+resource "google_storage_bucket_object" "verify_email" {
+  name   = "verify-emails.zip"
+  bucket = google_storage_bucket.bucket.name
+  source = "/Users/pranavprakash/cloud course/assignments/project/verify-emails.zip"
+}
+
+
 
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_instance_name

@@ -134,9 +134,9 @@ resource "google_service_account" "webapp_instance_access" {
 
 
 resource "google_project_iam_binding" "roles" {
-  project = var.project
+  project  = var.project
   for_each = toset(var.iam_roles)
-  role = each.key
+  role     = each.key
 
   members = [
     "serviceAccount:${google_service_account.webapp_instance_access.email}"
@@ -148,7 +148,13 @@ resource "google_pubsub_topic" "verify_email" {
   name                       = var.pubsub_topic_name
   message_retention_duration = var.message_retention_duration
 }
-
+resource "google_pubsub_subscription" "subscription" {
+  name                       = var.pubsub_subscription_name
+  topic                      = google_pubsub_topic.verify_email.id
+  message_retention_duration = var.subscription_message_retention
+  retain_acked_messages      = var.retain_acked_messages
+  ack_deadline_seconds       = var.ack_deadline_seconds
+}
 resource "random_id" "bucket_prefix" {
   byte_length = 8
 }
@@ -180,7 +186,7 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
   build_config {
     runtime     = var.cloud_function_runtime
     entry_point = var.cloud_function_entrypoint
-   
+
     source {
       storage_source {
         bucket = google_storage_bucket.bucket.name
@@ -190,19 +196,19 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
 
   }
   service_config {
-    service_account_email = google_service_account.webapp_instance_access.email
-    vpc_connector = google_vpc_access_connector.connector.id
+    service_account_email         = google_service_account.webapp_instance_access.email
+    vpc_connector                 = google_vpc_access_connector.connector.id
     vpc_connector_egress_settings = var.cloud_function_egress
-     environment_variables = {
-        DB_USER = google_sql_user.webapp.name
-        DB_PASS = random_password.password.result
-        DB_NAME = google_sql_database.webapp.name
-        INSTANCE_HOST = google_sql_database_instance.mysql_instance.private_ip_address
-        API_KEY = var.mail_api_key
+    environment_variables = {
+      DB_USER       = google_sql_user.webapp.name
+      DB_PASS       = random_password.password.result
+      DB_NAME       = google_sql_database.webapp.name
+      INSTANCE_HOST = google_sql_database_instance.mysql_instance.private_ip_address
+      API_KEY       = var.mail_api_key
     }
 
   }
-  
+
 
   event_trigger {
     trigger_region = var.region
@@ -252,8 +258,6 @@ resource "google_compute_instance" "vm_instance" {
     scopes = var.service_account_scopes
   }
 }
-
-
 
 resource "google_dns_record_set" "webapp" {
   name = var.dns_record_set_name

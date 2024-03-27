@@ -286,43 +286,43 @@ variable "mail_api_key" {
 }
 variable "iam_roles" {
   description = "List of roles to give to service account"
-  type = list(string)
+  type        = list(string)
 }
 variable "object_name" {
   description = "The name of the object in bucket"
-  type = string  
+  type        = string
 }
 variable "object_path" {
   description = "The path of the zip path"
-  type = string
+  type        = string
 }
 variable "vpc_connector_name" {
   description = "The name of the vpc connect"
-  type = string
+  type        = string
 }
 variable "vpc_connector_ip_range" {
   description = "The range of the vpc connect"
-  type = string
+  type        = string
 }
 variable "cloud_functions_name" {
   description = "The name of the cloud functions"
-  type = string
+  type        = string
 }
 variable "cloud_function_runtime" {
   description = "Runtime of the cloud function"
-  type = string
+  type        = string
 }
 variable "cloud_function_entrypoint" {
   description = "The entrypoint of the cloud function"
-  type = string
+  type        = string
 }
 variable "cloud_function_egress" {
   description = "The vpc egress setting for cloud function"
-  type = string
+  type        = string
 }
 variable "retry_policy_event" {
   description = "The retry policy for the event"
-  type = string
+  type        = string
 }
 variable "pubsub_topic_name" {
   description = "The name of the Pub/Sub topic"
@@ -336,5 +336,25 @@ variable "message_retention_duration" {
 variable "bucket_location" {
   description = "The location for the Google Cloud Storage bucket"
   type        = string
+}
+variable "pubsub_subscription_name" {
+  description = "The name of the Pub/Sub subscription"
+  type        = string
+}
+
+
+variable "subscription_message_retention" {
+  description = "The message retention duration for the Pub/Sub subscription"
+  type        = string
+}
+
+variable "retain_acked_messages" {
+  description = "Flag to retain acked messages for the Pub/Sub subscription"
+  type        = bool
+}
+
+variable "ack_deadline_seconds" {
+  description = "The ack deadline in seconds for the Pub/Sub subscription"
+  type        = number
 }
 

@@ -280,3 +280,61 @@ variable "dns_managed_zone" {
   description = "The name of managed zone"
   type        = string
 }
+variable "mail_api_key" {
+  description = "The API key for sending email"
+  type        = string
+}
+variable "iam_roles" {
+  description = "List of roles to give to service account"
+  type = list(string)
+}
+variable "object_name" {
+  description = "The name of the object in bucket"
+  type = string  
+}
+variable "object_path" {
+  description = "The path of the zip path"
+  type = string
+}
+variable "vpc_connector_name" {
+  description = "The name of the vpc connect"
+  type = string
+}
+variable "vpc_connector_ip_range" {
+  description = "The range of the vpc connect"
+  type = string
+}
+variable "cloud_functions_name" {
+  description = "The name of the cloud functions"
+  type = string
+}
+variable "cloud_function_runtime" {
+  description = "Runtime of the cloud function"
+  type = string
+}
+variable "cloud_function_entrypoint" {
+  description = "The entrypoint of the cloud function"
+  type = string
+}
+variable "cloud_function_egress" {
+  description = "The vpc egress setting for cloud function"
+  type = string
+}
+variable "retry_policy_event" {
+  description = "The retry policy for the event"
+  type = string
+}
+variable "pubsub_topic_name" {
+  description = "The name of the Pub/Sub topic"
+  type        = string
+}
+
+variable "message_retention_duration" {
+  description = "The message retention duration for the Pub/Sub topic"
+  type        = string
+}
+variable "bucket_location" {
+  description = "The location for the Google Cloud Storage bucket"
+  type        = string
+}
+

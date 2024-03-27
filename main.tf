@@ -135,11 +135,7 @@ resource "google_service_account" "webapp_instance_access" {
 
 resource "google_project_iam_binding" "roles" {
   project = var.project
-  for_each = toset([
-    "roles/logging.admin",
-    "roles/monitoring.metricWriter",
-    "roles/pubsub.publisher"
-  ])
+  for_each = toset(var.iam_roles)
   role = each.key
 
   members = [
@@ -149,8 +145,8 @@ resource "google_project_iam_binding" "roles" {
 
 
 resource "google_pubsub_topic" "verify_email" {
-  name                       = "verify-email"
-  message_retention_duration = "604800s"
+  name                       = var.pubsub_topic_name
+  message_retention_duration = var.message_retention_duration
 }
 
 resource "random_id" "bucket_prefix" {
@@ -159,26 +155,32 @@ resource "random_id" "bucket_prefix" {
 
 resource "google_storage_bucket" "bucket" {
   name                        = "${random_id.bucket_prefix.hex}-gcf-source"
-  location                    = "US"
+  location                    = var.bucket_location
   uniform_bucket_level_access = true
 }
 
 
 resource "google_storage_bucket_object" "verify_email" {
-  name   = "verify-emails.zip"
+  name   = var.object_name
   bucket = google_storage_bucket.bucket.name
-  source = "/Users/pranavprakash/cloud course/assignments/project/verify-emails.zip"
+  source = var.object_path
+}
+
+resource "google_vpc_access_connector" "connector" {
+  name          = var.vpc_connector_name
+  ip_cidr_range = var.vpc_connector_ip_range
+  network       = google_compute_network.vpc_network.self_link
 }
 
 resource "google_cloudfunctions2_function" "verify_email_function" {
-  name        = "verify-email-function"
+  name        = var.cloud_functions_name
   description = "Function to send verification email"
   location    = var.region
 
   build_config {
-    runtime     = "java17"
-    entry_point = "verifyemail.VerifyEmailSend"
-
+    runtime     = var.cloud_function_runtime
+    entry_point = var.cloud_function_entrypoint
+   
     source {
       storage_source {
         bucket = google_storage_bucket.bucket.name
@@ -189,16 +191,26 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
   }
   service_config {
     service_account_email = google_service_account.webapp_instance_access.email
+    vpc_connector = google_vpc_access_connector.connector.id
+    vpc_connector_egress_settings = var.cloud_function_egress
+     environment_variables = {
+        DB_USER = google_sql_user.webapp.name
+        DB_PASS = random_password.password.result
+        DB_NAME = google_sql_database.webapp.name
+        INSTANCE_HOST = google_sql_database_instance.mysql_instance.private_ip_address
+        API_KEY = var.mail_api_key
+    }
+
   }
+  
 
   event_trigger {
     trigger_region = var.region
     event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
     pubsub_topic   = google_pubsub_topic.verify_email.id
-    retry_policy   = "RETRY_POLICY_RETRY"
+    retry_policy   = var.retry_policy_event
   }
 }
-
 
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_instance_name
@@ -226,11 +238,11 @@ resource "google_compute_instance" "vm_instance" {
 
   }
   metadata_startup_script = <<-EOF
-    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/webapp?createDatabaseIfNotExist=true" > .env
-    echo "DATABASE_USERNAME=webapp" >> .env
+    echo "DATABASE_URL=jdbc:mysql://${google_sql_database_instance.mysql_instance.private_ip_address}:3306/${google_sql_database.webapp.name}?createDatabaseIfNotExist=true" > .env
+    echo "DATABASE_USERNAME=${google_sql_user.webapp.name}" >> .env
     echo "DATABASE_PASSWORD=${random_password.password.result}" >> .env
     echo "PROJECT_ID=${var.project}" >> .env
-    echo "TOPIC_ID=verify-email" >> .env
+    echo "TOPIC_ID=${var.pubsub_topic_name}" >> .env
     sudo chown -R csye6225:csye6225 .env
     sudo mv .env /opt/
   EOF

@@ -132,22 +132,25 @@ resource "google_service_account" "webapp_instance_access" {
   display_name = var.service_account_display_name
 }
 
-resource "google_project_iam_binding" "bind_logging_admin" {
+
+resource "google_project_iam_binding" "roles" {
   project = var.project
-  role    = var.iam_logging_roles
+  for_each = toset([
+    "roles/logging.admin",
+    "roles/monitoring.metricWriter",
+    "roles/pubsub.publisher"
+  ])
+  role = each.key
 
   members = [
     "serviceAccount:${google_service_account.webapp_instance_access.email}"
   ]
 }
 
-resource "google_project_iam_binding" "bind_monitoring_metric_writer" {
-  project = var.project
-  role    = var.iam_monitoring_roles
 
-  members = [
-    "serviceAccount:${google_service_account.webapp_instance_access.email}"
-  ]
+resource "google_pubsub_topic" "verify_email" {
+  name                       = "verify-email"
+  message_retention_duration = "604800s"
 }
 
 
@@ -157,7 +160,7 @@ resource "google_compute_instance" "vm_instance" {
   zone         = var.zone
 
   tags       = var.vm_tag
-  depends_on = [google_service_account.webapp_instance_access, google_project_iam_binding.bind_logging_admin, google_project_iam_binding.bind_monitoring_metric_writer]
+  depends_on = [google_service_account.webapp_instance_access, google_project_iam_binding.roles]
 
   boot_disk {
     auto_delete = true

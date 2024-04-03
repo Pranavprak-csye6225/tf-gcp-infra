@@ -358,3 +358,112 @@ variable "ack_deadline_seconds" {
   type        = number
 }
 
+variable "vm_instance_template_name" {
+  description = "The name of the VM instance template."
+  type        = string
+}
+
+variable "webapp_health_check" {
+  description = "The name of the health check for the web application."
+  type        = string
+}
+
+variable "check_interval_sec" {
+  description = "The interval between health checks in seconds."
+  type        = number
+}
+
+variable "timeout_sec" {
+  description = "The timeout for each health check attempt in seconds."
+  type        = number
+}
+
+variable "unhealthy_threshold" {
+  description = "The number of failed health checks before an instance is marked as unhealthy."
+  type        = number
+}
+
+variable "request_path" {
+  description = "The URL path used for the health check request."
+  type        = string
+}
+
+variable "port" {
+  description = "The port number used for the health check request."
+  type        = string
+}
+
+variable "max_replicas" {
+  description = "The maximum number of replicas that the autoscaler can scale up to."
+  type        = number
+}
+
+variable "min_replicas" {
+  description = "The minimum number of replicas that the autoscaler can scale down to."
+  type        = number
+}
+
+variable "cooldown_period" {
+  description = "The cooldown period in seconds, which is the time to wait before starting to scale again after the last scaling operation."
+  type        = number
+}
+
+variable "cpu_target" {
+  description = "The target CPU utilization for autoscaling. Must be a value between 0 and 1."
+  type        = number
+}
+
+variable "webapp_instance_group_name" {
+  description = "The name of the instance group."
+  type        = string
+}
+
+variable "initial_delay_sec" {
+  description = "The initial delay in seconds before the autohealing policies are applied."
+  type        = number
+}
+
+variable "named_port_name" {
+  description = "The name of the named port for the instance group manager."
+  type        = string
+}
+
+variable "named_port_port" {
+  description = "The port number for the named port in the instance group manager."
+  type        = number
+}
+
+variable "ssl_certificate_name" {
+  type    = string
+  default = "lb-ssl"
+}
+variable "ssl_certificate_domains" {
+  type    = list(string)
+  default = ["pranavprakash.me"]
+}
+
+variable "backend_service_name" {
+  type        = string
+  description = "The name of the backend service."
+}
+
+
+
+variable "load_balancing_scheme" {
+  type        = string
+  description = "The load balancing scheme for the backend service."
+}
+
+
+variable "protocol" {
+  type        = string
+  description = "The protocol used by the backend service."
+}
+
+variable "forwarding_rule_name" {
+  type        = string
+  description = "The name of the forwarding rule."
+}
+
+
+

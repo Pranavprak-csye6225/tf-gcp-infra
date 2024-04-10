@@ -256,7 +256,7 @@ resource "google_storage_bucket" "bucket" {
   storage_class               = var.bucket_storage_class
   uniform_bucket_level_access = true
   force_destroy               = var.bucket_force_destroy
-  depends_on = [ google_kms_crypto_key_iam_binding.bucket_crypto_key ]
+  depends_on                  = [google_kms_crypto_key_iam_binding.bucket_crypto_key]
   encryption {
     default_kms_key_name = google_kms_crypto_key.bucket_crypto_key.id
   }

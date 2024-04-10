@@ -87,7 +87,8 @@ resource "google_sql_database_instance" "mysql_instance" {
   name                = "${var.mysql_instance_name}-${random_id.db_name_suffix.hex}"
   database_version    = var.mysql_version
   deletion_protection = var.mysql_instance_deletion_policy
-  depends_on          = [google_service_networking_connection.ps_connection]
+  depends_on          = [google_service_networking_connection.ps_connection, google_kms_crypto_key.sql_crypto_key]
+  encryption_key_name = google_kms_crypto_key.sql_crypto_key.id
   settings {
     tier              = var.mysql_instance_tier
     availability_type = var.mysql_instance_availability_type
@@ -145,6 +146,78 @@ resource "google_project_iam_binding" "roles" {
   ]
 }
 
+resource "random_id" "key_name_suffix" {
+  byte_length = 4
+}
+
+resource "google_kms_key_ring" "keyring" {
+  name     = "keyring-${random_id.key_name_suffix.hex}"
+  location = var.region
+}
+
+resource "google_kms_crypto_key" "sql_crypto_key" {
+  name            = "sql-crypto-key"
+  key_ring        = google_kms_key_ring.keyring.id
+  rotation_period = "2592000s"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+resource "google_kms_crypto_key" "instance_crypto_key" {
+  name            = "instance-crypto-key"
+  key_ring        = google_kms_key_ring.keyring.id
+  rotation_period = "2592000s"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+resource "google_kms_crypto_key" "bucket_crypto_key" {
+  name            = "bucket-crypto-key"
+  key_ring        = google_kms_key_ring.keyring.id
+  rotation_period = "2592000s"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+resource "google_project_service_identity" "gcp_sa_cloud_sql" {
+  provider = google-beta
+  project  = var.project
+  service  = "sqladmin.googleapis.com"
+}
+resource "google_kms_crypto_key_iam_binding" "sql_crypto_key" {
+  provider      = google-beta
+  crypto_key_id = google_kms_crypto_key.sql_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:${google_project_service_identity.gcp_sa_cloud_sql.email}",
+  ]
+}
+data "google_storage_project_service_account" "gcs_account" {
+}
+resource "google_kms_crypto_key_iam_binding" "bucket_crypto_key" {
+  provider      = google-beta
+  crypto_key_id = google_kms_crypto_key.bucket_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}",
+  ]
+}
+
+resource "google_kms_crypto_key_iam_binding" "instance_crypto_key" {
+  provider      = google-beta
+  crypto_key_id = google_kms_crypto_key.instance_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:service-321404517735@compute-system.iam.gserviceaccount.com",
+  ]
+}
 
 resource "google_pubsub_topic" "verify_email" {
   name                       = var.pubsub_topic_name
@@ -163,8 +236,13 @@ resource "random_id" "bucket_prefix" {
 
 resource "google_storage_bucket" "bucket" {
   name                        = "${random_id.bucket_prefix.hex}-gcf-source"
-  location                    = var.bucket_location
+  location                    = var.region
+  storage_class               = "REGIONAL"
   uniform_bucket_level_access = true
+  force_destroy               = true
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.bucket_crypto_key.id
+  }
 }
 
 
@@ -224,7 +302,7 @@ resource "google_compute_region_instance_template" "vm_instance_template" {
   name         = var.vm_instance_template_name
   tags         = var.vm_tag
   machine_type = var.machine_type
-  depends_on   = [google_service_account.webapp_instance_access, google_project_iam_binding.roles]
+  depends_on   = [google_service_account.webapp_instance_access, google_project_iam_binding.roles, google_kms_crypto_key.instance_crypto_key]
   // Create a new boot disk from an image
   disk {
     source_image = var.image
@@ -232,7 +310,11 @@ resource "google_compute_region_instance_template" "vm_instance_template" {
     boot         = true
     disk_size_gb = var.disk_size_vm
     disk_type    = var.disk_type
+    disk_encryption_key {
+      kms_key_self_link = google_kms_crypto_key.instance_crypto_key.id
+    }
   }
+
 
   network_interface {
     network    = google_compute_network.vpc_network.self_link

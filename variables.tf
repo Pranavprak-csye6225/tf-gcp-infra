@@ -243,25 +243,26 @@ variable "ps_connection_service" {
   type        = string
 }
 
-variable "service_account_id" {
-  description = "The id of the service account"
+variable "vm_service_account_id" {
+  description = "The id of the VM instance service account"
   type        = string
 }
 
-variable "service_account_display_name" {
-  description = "The display name of the display name"
+variable "vm_service_account_display_name" {
+  description = "The display name of the VM Service Account"
   type        = string
 }
 
-variable "iam_logging_roles" {
-  description = "iam logging role"
+variable "cloudf_service_account_id" {
+  description = "The id of the cloud function service account"
   type        = string
 }
 
-variable "iam_monitoring_roles" {
-  description = "iam monitoring role"
+variable "cloudf_service_account_display_name" {
+  description = "The display name of the cloud function Service Account"
   type        = string
 }
+
 
 variable "dns_record_set_name" {
   description = "Name of the record"
@@ -284,7 +285,11 @@ variable "mail_api_key" {
   description = "The API key for sending email"
   type        = string
 }
-variable "iam_roles" {
+variable "vm_iam_roles" {
+  description = "List of roles to give to service account"
+  type        = list(string)
+}
+variable "cloud_iam_roles" {
   description = "List of roles to give to service account"
   type        = list(string)
 }
@@ -465,5 +470,89 @@ variable "forwarding_rule_name" {
   description = "The name of the forwarding rule."
 }
 
+variable "keyring_name" {
+  type        = string
+  description = "The name of the keyring."
+}
 
+variable "instance_cryptokey_name" {
+  type        = string
+  description = "The name of the instance cryptokey."
+}
+
+variable "sql_cryptokey_name" {
+  type        = string
+  description = "The name of the sql cryptokey."
+}
+
+variable "bucket_cryptokey_name" {
+  type        = string
+  description = "The name of the buckett cryptokey."
+}
+
+variable "rototion_period" {
+  type        = string
+  description = "This says the rotation period"
+}
+
+variable "sql_identity_service" {
+  description = "The service of the service identity"
+  type        = string
+}
+variable "crypto_key_role" {
+  description = "The role of the crypto key"
+  type        = string
+}
+variable "compute_system_sa_email" {
+  description = "The email of the compute system service account"
+  type        = string
+}
+variable "bucket_storage_class" {
+  description = "The bucket of the storage class"
+  type        = string
+}
+variable "bucket_force_destroy" {
+  description = "The bool of the force destroy"
+  type        = bool
+}
+variable "secret_mysql_ip_name" {
+  description = "The name of the mysql ip secret name"
+  type        = string
+}
+variable "secret_mysql_db_name" {
+  description = "The name of the mysql db secret name"
+  type        = string
+}
+variable "secret_mysql_user_name" {
+  description = "The name of the mysql user secret name"
+  type        = string
+}
+variable "secret_mysql_pas_name" {
+  description = "The name of the mysql pas secret name"
+  type        = string
+}
+variable "secret_instance_key_name" {
+  description = "The name of the instance key secret name"
+  type        = string
+}
+variable "secret_service_account_name" {
+  description = "The name of the service account secret name"
+  type        = string
+}
+variable "https_port" {
+  description = "The port of the https proxy"
+  type        = string
+}
+variable "https_proxy_name" {
+  description = "The name of the https proxy"
+  type        = string
+}
+variable "url_map_name" {
+  description = "The name of the url map"
+  type        = string
+}
+variable "autoscaler_name" {
+  description = "The name of the autoscaler"
+  type        = string
+}
 

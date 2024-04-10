@@ -298,6 +298,84 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
   }
 }
 
+#mysql-ip
+resource "google_secret_manager_secret" "secret_mysql_ip" {
+  secret_id = "secret-mysql-ip"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_mysql_ip" {
+  secret = google_secret_manager_secret.secret_mysql_ip.id
+  secret_data = google_sql_database_instance.mysql_instance.private_ip_address
+}
+#database-name
+resource "google_secret_manager_secret" "secret_database_name" {
+  secret_id = "secret-database-name"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_database" {
+  secret = google_secret_manager_secret.secret_database_name.id
+  secret_data = google_sql_database.webapp.name
+}
+
+#user-name
+resource "google_secret_manager_secret" "secret_user_name" {
+  secret_id = "secret-user-name"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_user" {
+  secret = google_secret_manager_secret.secret_user_name.id
+  secret_data = google_sql_user.webapp.name
+}
+
+#mysql-password
+resource "google_secret_manager_secret" "secret_mysql_password" {
+  secret_id = "secret-mysql-password"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_password" {
+  secret = google_secret_manager_secret.secret_mysql_password.id
+  secret_data = random_password.password.result
+}
+
+#instance-key
+resource "google_secret_manager_secret" "secret_instance_key" {
+  secret_id = "secret-instance-key"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_instance_key" {
+  secret = google_secret_manager_secret.secret_instance_key.id
+  secret_data = "projects/cloud-course-csye6225-dev/locations/us-east1/keyRings/${google_kms_key_ring.keyring.name}/cryptoKeys/${google_kms_crypto_key.instance_crypto_key.name}"
+}
+
+#service_account
+resource "google_secret_manager_secret" "secret_service_account" {
+  secret_id = "secret-service-account"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret_version_service_account" {
+  secret = google_secret_manager_secret.secret_service_account.id
+  secret_data = google_service_account.webapp_instance_access.email
+}
+
+
 resource "google_compute_region_instance_template" "vm_instance_template" {
   name         = var.vm_instance_template_name
   tags         = var.vm_tag

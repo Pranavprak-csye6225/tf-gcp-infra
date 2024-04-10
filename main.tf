@@ -131,14 +131,14 @@ resource "google_sql_user" "webapp" {
 
 
 resource "google_service_account" "webapp_instance_access" {
-  account_id   = var.service_account_id
-  display_name = var.service_account_display_name
+  account_id   = var.vm_service_account_id
+  display_name = var.vm_service_account_display_name
 }
 
 
-resource "google_project_iam_binding" "roles" {
+resource "google_project_iam_binding" "vm_instance_roles" {
   project  = var.project
-  for_each = toset(var.iam_roles)
+  for_each = toset(var.vm_iam_roles)
   role     = each.key
 
   members = [
@@ -146,37 +146,53 @@ resource "google_project_iam_binding" "roles" {
   ]
 }
 
+resource "google_service_account" "cloud_function_access" {
+  account_id   = var.cloudf_service_account_id
+  display_name = var.cloudf_service_account_display_name
+}
+
+resource "google_project_iam_binding" "cloud_function_roles" {
+  project  = var.project
+  for_each = toset(var.cloud_iam_roles)
+  role     = each.key
+
+  members = [
+    "serviceAccount:${google_service_account.cloud_function_access.email}"
+  ]
+}
+
+
 resource "random_id" "key_name_suffix" {
   byte_length = 4
 }
 
 resource "google_kms_key_ring" "keyring" {
-  name     = "keyring-${random_id.key_name_suffix.hex}"
+  name     = "${var.keyring_name}-${random_id.key_name_suffix.hex}"
   location = var.region
 }
 
 resource "google_kms_crypto_key" "sql_crypto_key" {
-  name            = "sql-crypto-key"
+  name            = var.sql_cryptokey_name
   key_ring        = google_kms_key_ring.keyring.id
-  rotation_period = "2592000s"
+  rotation_period = var.rototion_period
 
   lifecycle {
     prevent_destroy = false
   }
 }
 resource "google_kms_crypto_key" "instance_crypto_key" {
-  name            = "instance-crypto-key"
+  name            = var.instance_cryptokey_name
   key_ring        = google_kms_key_ring.keyring.id
-  rotation_period = "2592000s"
+  rotation_period = var.rototion_period
 
   lifecycle {
     prevent_destroy = false
   }
 }
 resource "google_kms_crypto_key" "bucket_crypto_key" {
-  name            = "bucket-crypto-key"
+  name            = var.bucket_cryptokey_name
   key_ring        = google_kms_key_ring.keyring.id
-  rotation_period = "2592000s"
+  rotation_period = var.rototion_period
 
   lifecycle {
     prevent_destroy = false
@@ -186,12 +202,12 @@ resource "google_kms_crypto_key" "bucket_crypto_key" {
 resource "google_project_service_identity" "gcp_sa_cloud_sql" {
   provider = google-beta
   project  = var.project
-  service  = "sqladmin.googleapis.com"
+  service  = var.sql_identity_service
 }
 resource "google_kms_crypto_key_iam_binding" "sql_crypto_key" {
   provider      = google-beta
   crypto_key_id = google_kms_crypto_key.sql_crypto_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  role          = var.crypto_key_role
 
   members = [
     "serviceAccount:${google_project_service_identity.gcp_sa_cloud_sql.email}",
@@ -202,7 +218,7 @@ data "google_storage_project_service_account" "gcs_account" {
 resource "google_kms_crypto_key_iam_binding" "bucket_crypto_key" {
   provider      = google-beta
   crypto_key_id = google_kms_crypto_key.bucket_crypto_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  role          = var.crypto_key_role
 
   members = [
     "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}",
@@ -212,10 +228,10 @@ resource "google_kms_crypto_key_iam_binding" "bucket_crypto_key" {
 resource "google_kms_crypto_key_iam_binding" "instance_crypto_key" {
   provider      = google-beta
   crypto_key_id = google_kms_crypto_key.instance_crypto_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  role          = var.crypto_key_role
 
   members = [
-    "serviceAccount:service-321404517735@compute-system.iam.gserviceaccount.com",
+    "serviceAccount:${var.compute_system_sa_email}",
   ]
 }
 
@@ -237,9 +253,10 @@ resource "random_id" "bucket_prefix" {
 resource "google_storage_bucket" "bucket" {
   name                        = "${random_id.bucket_prefix.hex}-gcf-source"
   location                    = var.region
-  storage_class               = "REGIONAL"
+  storage_class               = var.bucket_storage_class
   uniform_bucket_level_access = true
-  force_destroy               = true
+  force_destroy               = var.bucket_force_destroy
+  depends_on = [ google_kms_crypto_key_iam_binding.bucket_crypto_key ]
   encryption {
     default_kms_key_name = google_kms_crypto_key.bucket_crypto_key.id
   }
@@ -276,7 +293,7 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
 
   }
   service_config {
-    service_account_email         = google_service_account.webapp_instance_access.email
+    service_account_email         = google_service_account.cloud_function_access.email
     vpc_connector                 = google_vpc_access_connector.connector.id
     vpc_connector_egress_settings = var.cloud_function_egress
     environment_variables = {
@@ -300,78 +317,78 @@ resource "google_cloudfunctions2_function" "verify_email_function" {
 
 #mysql-ip
 resource "google_secret_manager_secret" "secret_mysql_ip" {
-  secret_id = "secret-mysql-ip"
+  secret_id = var.secret_mysql_ip_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_mysql_ip" {
-  secret = google_secret_manager_secret.secret_mysql_ip.id
+  secret      = google_secret_manager_secret.secret_mysql_ip.id
   secret_data = google_sql_database_instance.mysql_instance.private_ip_address
 }
 #database-name
 resource "google_secret_manager_secret" "secret_database_name" {
-  secret_id = "secret-database-name"
+  secret_id = var.secret_mysql_db_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_database" {
-  secret = google_secret_manager_secret.secret_database_name.id
+  secret      = google_secret_manager_secret.secret_database_name.id
   secret_data = google_sql_database.webapp.name
 }
 
 #user-name
 resource "google_secret_manager_secret" "secret_user_name" {
-  secret_id = "secret-user-name"
+  secret_id = var.secret_mysql_user_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_user" {
-  secret = google_secret_manager_secret.secret_user_name.id
+  secret      = google_secret_manager_secret.secret_user_name.id
   secret_data = google_sql_user.webapp.name
 }
 
 #mysql-password
 resource "google_secret_manager_secret" "secret_mysql_password" {
-  secret_id = "secret-mysql-password"
+  secret_id = var.secret_mysql_pas_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_password" {
-  secret = google_secret_manager_secret.secret_mysql_password.id
+  secret      = google_secret_manager_secret.secret_mysql_password.id
   secret_data = random_password.password.result
 }
 
 #instance-key
 resource "google_secret_manager_secret" "secret_instance_key" {
-  secret_id = "secret-instance-key"
+  secret_id = var.secret_instance_key_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_instance_key" {
-  secret = google_secret_manager_secret.secret_instance_key.id
-  secret_data = "projects/cloud-course-csye6225-dev/locations/us-east1/keyRings/${google_kms_key_ring.keyring.name}/cryptoKeys/${google_kms_crypto_key.instance_crypto_key.name}"
+  secret      = google_secret_manager_secret.secret_instance_key.id
+  secret_data = "projects/${var.project}/locations/${var.region}/keyRings/${google_kms_key_ring.keyring.name}/cryptoKeys/${google_kms_crypto_key.instance_crypto_key.name}"
 }
 
 #service_account
 resource "google_secret_manager_secret" "secret_service_account" {
-  secret_id = "secret-service-account"
+  secret_id = var.secret_service_account_name
   replication {
     auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "secret_version_service_account" {
-  secret = google_secret_manager_secret.secret_service_account.id
+  secret      = google_secret_manager_secret.secret_service_account.id
   secret_data = google_service_account.webapp_instance_access.email
 }
 
@@ -380,7 +397,7 @@ resource "google_compute_region_instance_template" "vm_instance_template" {
   name         = var.vm_instance_template_name
   tags         = var.vm_tag
   machine_type = var.machine_type
-  depends_on   = [google_service_account.webapp_instance_access, google_project_iam_binding.roles, google_kms_crypto_key.instance_crypto_key]
+  depends_on   = [google_service_account.webapp_instance_access, google_project_iam_binding.vm_instance_roles, google_kms_crypto_key.instance_crypto_key]
   // Create a new boot disk from an image
   disk {
     source_image = var.image
@@ -432,7 +449,7 @@ resource "google_compute_health_check" "webapp_health_check" {
 }
 
 resource "google_compute_region_autoscaler" "webapp_autoscaler" {
-  name   = "webapp-autoscaler"
+  name   = var.autoscaler_name
   region = var.region
   target = google_compute_region_instance_group_manager.webserver_igm.id
 
@@ -487,11 +504,11 @@ resource "google_compute_backend_service" "lb_webapp_backend_service" {
   }
 }
 resource "google_compute_url_map" "web_url_map" {
-  name            = "web-map-http"
+  name            = var.url_map_name
   default_service = google_compute_backend_service.lb_webapp_backend_service.id
 }
 resource "google_compute_target_https_proxy" "lb_https_proxy" {
-  name    = "lb-https-proxy"
+  name    = var.https_proxy_name
   url_map = google_compute_url_map.web_url_map.id
   ssl_certificates = [
     google_compute_managed_ssl_certificate.lb_ssl.name
@@ -505,7 +522,7 @@ resource "google_compute_global_forwarding_rule" "https_forwarding_rule" {
   name                  = var.forwarding_rule_name
   target                = google_compute_target_https_proxy.lb_https_proxy.id
   load_balancing_scheme = var.load_balancing_scheme
-  port_range            = "443"
+  port_range            = var.https_port
 
 }
 
